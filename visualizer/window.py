@@ -7,11 +7,13 @@ from graph_helper import lighten_color
 
 class Window:
 
-    def __init__(self, tsne, esps, label_names, knn=None, example=None, title="TSNE"):
+    def __init__(self, tsne, esps, label_names, data=None, knn=None, example=None, title="TSNE"):
         self.tsne = Tsne(tsne, knn, example, title)
         self.fig = self.tsne.set_axes()
         self.esps = esps
         self.label_names = label_names
+
+        self.data = data
 
         self.train_widget, self.test_widget = self.tsne.set_plots()
         self.train_widget.on_clicked(self.select_esp_train)
@@ -57,7 +59,7 @@ class Window:
                 self.tsne.data.loc[id, label_mode] = lighten_color(
                     self.tsne.data.loc[id, label_mode], tint[self.tsne.data.loc[id, 'mode']])
                 self.tsne.knn_artists[i +
-                                    1].set_facecolor(self.tsne.data.loc[id, label_mode])
+                                      1].set_facecolor(self.tsne.data.loc[id, label_mode])
 
         train = self.tsne.data[self.tsne.data["mode"] == 'train']
         test = self.tsne.data[self.tsne.data["mode"] == 'test']
@@ -86,9 +88,13 @@ class Window:
 
         for id in event.ind:
             index = indices[id] if (type(indices) == list) else indices
-            print(index)
-            title = str(index) + " - " + str(self.label_names[index]) + " - ESP " + str(
-                int(self.esps.loc[index]) + 1)
+
+            label = str(self.label_names[index])
+            esp_id = str(int(self.esps.loc[index]) + 1)
+            signal = str(self.data.loc[index, "RPD row"])
+            axis = "X" if self.data.loc[index, "RPD axis"] == 0 else "Y"
+            title = str(index) + " - " + label + " - ESP " + \
+                esp_id + " - " + signal + axis
 
             fig, ax = plt.subplots()
 
