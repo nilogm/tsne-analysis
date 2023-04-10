@@ -8,48 +8,72 @@ from graph_helper import lighten_color
 class Window:
 
     def __init__(self, tsne, esps, label_names, data=None, knn=None, example=None, title="TSNE"):
-        self.tsne = Tsne(tsne, knn, example, title)
-        self.fig = self.tsne.set_axes()
+        self.tsne = Tsne(tsne, knn, example, title, data)
+        self.tsne.set_manager_window()
+        self.fig = self.tsne.set_tsne_window()
         self.esps = esps
         self.label_names = label_names
 
         self.data = data
 
-        self.train_widget, self.test_widget = self.tsne.set_plots()
-        self.train_widget.on_clicked(self.select_esp_train)
-        self.test_widget.on_clicked(self.select_esp_test)
+        self.train_widget, self.test_widget, self.signal_widget = self.tsne.set_plots()
+        self.train_widget.on_clicked(
+            lambda label: self.toggle_visibility(label, self.tsne.train_scatter))
+        self.test_widget.on_clicked(
+            lambda label: self.toggle_visibility(label, self.tsne.test_scatter))
+        self.signal_widget.on_clicked(
+            lambda label: self.toggle_visibility(label, self.tsne.groups_scatter))
 
-        self.label_widget, self.knn_widget, self.slider_widget = self.tsne.set_widgets()
-        self.label_widget.on_clicked(self.select_label)
+        self.label_toggle, self.knn_widget, self.slider_widget = self.tsne.set_widgets()
+        self.label_toggle.on_clicked(self.set_colors_knn)
         if self.tsne.knn != None:
-            self.knn_widget.on_clicked(self.enable_knn)
-            self.slider_widget.on_changed(self.update)
+            self.knn_widget.on_clicked(self.toggle_knn)
+            self.slider_widget.on_changed(self.slider_update)
 
         self.set_colors_knn()
 
-        self.fig.canvas.mpl_connect('pick_event', self.onpick)
+        self.fig.canvas.mpl_connect('pick_event', self.show_graph)
 
     # check buttons
 
-    def checklist(self, label, info):
-        index = int(label)
-        boolean = info[index].get_visible()
-        info[index].set_visible(not boolean)
+    def toggle_visibility(self, label, info):
+        """Given the label, toggle visibility of group.
+
+        Args:
+            label (int): button label
+            info (dict): group to items dictionary
+        """
+        if info == None:
+            return
+
+        if label == "all" or label == "X" or label == "Y":
+            index = label
+        else:
+            index = int(label)
+
+        info[index].set_visible(not (info[index].get_visible()))
 
         self.fig.canvas.draw()
 
-    def select_esp_train(self, label):
-        self.checklist(label, self.tsne.train_scatter)
+    def set_colors(self, tag, scatter, label_mode):
+        """Sets the color of scatter based on tag and label.
 
-    def select_esp_test(self, label):
-        self.checklist(label, self.tsne.test_scatter)
+        Args:
+            tag (str): mode to extract data from
+            scatter (dict): esp to scatter dictionary
+            label_mode (str): label mode (real/predicted)
+        """
+        data = self.tsne.data[self.tsne.data["mode"] == tag]
+        for id, scat in scatter.items():
+            scat.set_facecolor(
+                data[data["esp"] == id - 1][label_mode].tolist())
 
     def set_colors_knn(self):
-        label_mode = 'labels' if self.label_widget.get_status()[
-            0] else 'p_label'
-
-        self.tsne.data[label_mode] = self.tsne.original_label_colors if self.label_widget.get_status()[
-            0] else self.tsne.original_p_label_colors
+        """Sets the colors of all scatters.
+        """
+        real_label = self.label_toggle.get_status()[0]
+        label_mode = 'labels' if real_label else 'p_label'
+        self.tsne.data[label_mode] = self.tsne.label_colors if real_label else self.tsne.p_label_colors
 
         if self.tsne.knn_example != None:
             self.tsne.data.loc[self.tsne.knn_example, label_mode] = 'black'
@@ -61,29 +85,21 @@ class Window:
                 self.tsne.knn_artists[i +
                                       1].set_facecolor(self.tsne.data.loc[id, label_mode])
 
-        train = self.tsne.data[self.tsne.data["mode"] == 'train']
-        test = self.tsne.data[self.tsne.data["mode"] == 'test']
-
-        for id, scatter in self.tsne.train_scatter.items():
-            scatter.set_facecolor(
-                train[train["esp"] == id - 1][label_mode].tolist())
-
-        for id, scatter in self.tsne.test_scatter.items():
-            scatter.set_facecolor(
-                test[test["esp"] == id - 1][label_mode].tolist())
+        self.set_colors('train', self.tsne.train_scatter, label_mode)
+        self.set_colors('test', self.tsne.test_scatter, label_mode)
 
         self.fig.canvas.draw()
-
-    # check button for enabling real/predicted labels
-
-    def select_label(self, label):
-        self.set_colors_knn()
 
     # on click event
     # when clicked on point, gets artist responsible for creating it
     # gets list of indexes of artist and searches for id (order of creation)
 
-    def onpick(self, event):
+    def show_graph(self, event):
+        """Show graph of picked signal based on event.
+
+        Args:
+            event (): 
+        """
         indices = self.tsne.artists.get(event.artist)
 
         for id in event.ind:
@@ -96,6 +112,8 @@ class Window:
             title = str(index) + " - " + label + " - ESP " + \
                 esp_id + " - " + signal + axis
 
+            self.tsne.set_groups(int(signal))
+
             fig, ax = plt.subplots()
 
             X, Y = get_axis(index)
@@ -106,30 +124,38 @@ class Window:
             fig.canvas.manager.set_window_title(title)
             fig.show()
 
-    # k number slider function
+    def slider_update(self, k):
+        """Updates visibility of knn based on slider value.
 
-    def update(self, val):
-        if self.tsne.knn_example != None:
-            for index, item in self.tsne.knn_artists.items():
-                item.set_visible(
-                    index <= val and self.knn_widget.get_status()[0])
+        Args:
+            k (int): amount of neighbors
+        """
+        for index, item in self.tsne.knn_artists.items():
+            item.set_visible(
+                index <= k and self.knn_widget.get_status()[0])
 
-            self.set_colors_knn()
+        self.set_colors_knn()
 
-    # enable or disable knn only view
+    def enable_scatter(self, scatter, bool):
+        """Toggles visibility of scatter.
 
-    def enable_knn(self, label):
-        if self.tsne.knn_example != None:
-            showing_knn = self.knn_widget.get_status()[0]
+        Args:
+            scatter (dict): esp to scatter dictionary
+            bool (bool): state to change to
+        """
+        for _, s in scatter.items():
+            s.set_visible(bool)
 
-            for _, scatter in self.tsne.train_scatter.items():
-                scatter.set_visible(not showing_knn)
+    def toggle_knn(self):
+        """Toggles visibility to display all or only knn tsne.
+        """
+        showing_knn = self.knn_widget.get_status()[0]
 
-            for _, scatter in self.tsne.test_scatter.items():
-                scatter.set_visible(not showing_knn)
+        self.enable_scatter(self, self.tsne.train_scatter, not showing_knn)
+        self.enable_scatter(self, self.tsne.test_scatter, not showing_knn)
 
-            for i, artist in self.tsne.knn_artists.items():
-                artist.set_visible(showing_knn if i <=
-                                   self.slider_widget.val else False)
+        for i, artist in self.tsne.knn_artists.items():
+            artist.set_visible(showing_knn if i <=
+                               self.slider_widget.val else False)
 
-            self.fig.canvas.draw()
+        self.fig.canvas.draw()
