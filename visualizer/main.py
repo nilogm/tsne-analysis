@@ -5,14 +5,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-path = "/home/ngmonteiro/ESPset-normal/sibling results"
+path = "/home/hullo/tsne-analysis/sibling results"
+data_path = "/home/hullo/OneDrive/NINFA/Dataset"
 
 # features.csv
-real_labels = pd.read_csv('/home/ngmonteiro/RPDBCS/features_all.csv',
+real_labels = pd.read_csv('%s/features_all.csv' % data_path,
                           sep=';', index_col='id')
 
 # spectrum.npz
-signals_data = np.load('/home/ngmonteiro/RPDBCS/spectrum.npz')
+signals_data = np.load('%s/spectrum.npz' % data_path)
 
 i = 1
 while (i < 13):

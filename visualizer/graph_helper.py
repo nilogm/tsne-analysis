@@ -53,7 +53,20 @@ def scatter(ax, data_dict, scatter_list, artist_dict, show=False):
             {scatter.findobj()[0]: obj})
         scatter_list.update({key: scatter})
 
-    return artist_dict
+
+def m_scatter(ax, data_dict, scatter_list, show=False):
+    for key, item in data_dict.items():
+        m = markers[item.esp.astype(int)] if (
+            type(item) == pd.Series) else markers[int(item["esp"].iloc[0])]
+
+        for i, label in enumerate(item["labels"]):
+            item.iloc[i]["labels"] = lighten_color(label, 0.1)
+
+        scatter = ax.scatter(data=item, x="x", y="y", c="labels", edgecolors='black',
+                             linewidths=0.5, marker=m, s=70)
+        scatter.set_visible(show)
+
+        scatter_list.update({key: scatter})
 
 # https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
 

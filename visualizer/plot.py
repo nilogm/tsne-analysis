@@ -2,14 +2,16 @@ import matplotlib as mpl
 import pandas as pd
 import numpy as np
 
+data_path = "/home/hullo/OneDrive/NINFA/Dataset"
+
 # mpl.use('TkAgg')
 
 NORM_FREQ = 37.28941975
 
-df = pd.read_csv('/home/ngmonteiro/RPDBCS/features_all.csv', delimiter=';')
-df2 = pd.read_csv('/home/ngmonteiro/RPDBCS/labels.csv', delimiter=';', comment='#')
+df = pd.read_csv('%s/features_all.csv' % data_path, delimiter=';')
+df2 = pd.read_csv('%s/labels.csv' % data_path, delimiter=';', comment='#')
 
-with np.load('/home/ngmonteiro/RPDBCS/spectrum.npz') as f:
+with np.load('%s/spectrum.npz' % data_path) as f:
     mat = [f[str(i.id)][100:6200] for _, i in df.iterrows()]
 
 def get_axis(index):
