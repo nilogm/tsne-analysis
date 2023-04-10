@@ -2,7 +2,7 @@ import matplotlib as mpl
 import pandas as pd
 import numpy as np
 
-data_path = "/home/hullo/OneDrive/NINFA/Dataset"
+data_path = "/home/ngmonteiro/RPDBCS"
 
 # mpl.use('TkAgg')
 

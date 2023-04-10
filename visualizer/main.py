@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-path = "/home/hullo/tsne-analysis/sibling results"
-data_path = "/home/hullo/OneDrive/NINFA/Dataset"
+path = "/home/ngmonteiro/tsne-analysis/sibling results"
+data_path = "/home/ngmonteiro/RPDBCS"
 
 # features.csv
 real_labels = pd.read_csv('%s/features_all.csv' % data_path,

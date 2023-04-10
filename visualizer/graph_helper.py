@@ -59,8 +59,11 @@ def m_scatter(ax, data_dict, scatter_list, show=False):
         m = markers[item.esp.astype(int)] if (
             type(item) == pd.Series) else markers[int(item["esp"].iloc[0])]
 
+        print(item["labels"])
         for i, label in enumerate(item["labels"]):
             item.iloc[i]["labels"] = lighten_color(label, 0.1)
+        print(item["labels"])
+        # exit()
 
         scatter = ax.scatter(data=item, x="x", y="y", c="labels", edgecolors='black',
                              linewidths=0.5, marker=m, s=70)
