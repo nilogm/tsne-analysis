@@ -48,7 +48,7 @@ class Window:
         if info == None:
             return
 
-        index = label if label == "all" or label == "X" or label == "Y" else int(label)
+        index = label if label == "X" or label == "Y" else int(label)
         info[index].set_visible(not (info[index].get_visible()))
         self.fig.canvas.draw()
 
@@ -93,10 +93,6 @@ class Window:
 
         self.fig.canvas.draw()
 
-    # on click event
-    # when clicked on point, gets artist responsible for creating it
-    # gets list of indexes of artist and searches for id (order of creation)
-    
     def on_click(self, event):
         if self.get_signal_state:
             self.get_signal(event)
@@ -106,24 +102,38 @@ class Window:
     def get_signal(self, event):
         """Gets signal of clicked point.
         """
+        
+        for i, state in enumerate(self.signal_widget.get_status()):
+            if not state:
+                self.signal_widget.set_active(i)
+            
         indices = self.tsne.artists.get(event.artist)
 
         for id in event.ind:
             index = indices[id] if (type(indices) == list) else indices
+            if index == None:
+                return
+            
             signal = self.data.loc[index, "RPD row"]
             self.tsne.set_groups(signal)
+            
+            self.fig.canvas.draw()
             break
+        
+    # on click event
+    # when clicked on point, gets artist responsible for creating it
+    # gets list of indexes of artist and searches for id (order of creation)
 
     def show_graph(self, event):
         """Show graph of picked signal based on event.
-
-        Args:
-            event (): 
         """
         indices = self.tsne.artists.get(event.artist)
+        
 
         for id in event.ind:
             index = indices[id] if (type(indices) == list) else indices
+            if index == None:
+                return
 
             label = str(self.label_names[index])
             esp_id = str(int(self.esps.loc[index]) + 1)

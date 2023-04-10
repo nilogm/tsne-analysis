@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.widgets import CheckButtons, Slider
 import numpy as np
-import pandas as pd
-from graph_helper import create_ax, set_ax, create_legend, scatter, m_scatter
+from graph_helper import create_ax, set_ax, create_legend, scatter
 from constants import number_to_color_dict, marker_dict, name_to_color_dict, color_to_name_dict
 
 
@@ -86,6 +85,8 @@ class Tsne:
         return train_buttons, test_buttons, signal_buttons
 
     def set_widgets(self):
+        """Sets control + knn widgets.
+        """
         control_panel = CheckButtons(self.control_ax, ["Real Label", "Get Signal"], [True, False])
 
         if self.knn != None:
@@ -112,29 +113,35 @@ class Tsne:
 
         return buttons
 
-    def set_groups(self, signal_row, axis=None):
+    def set_groups(self, signal):
+        """Set group to focus on based in signal.
+
+        Args:
+            signal (int): signal id of sensor.
+        """
         if len(self.groups_scatter) != 0:
             for _, item in self.groups_scatter.items():
                 item.set_visible(False)
             self.groups_scatter.clear()
             
-        same_row = self.real_data.loc[self.real_data["RPD row"] == signal_row]
+        same_row = self.real_data.loc[self.real_data["RPD row"] == signal]
 
-        x = same_row.loc[same_row["RPD axis"] == "X"].index.to_list()
-        y = same_row.loc[same_row["RPD axis"] == "Y"].index.to_list()
+        x = set(same_row.loc[same_row["RPD axis"] == "X"].index)
+        y = set(same_row.loc[same_row["RPD axis"] == "Y"].index)
 
         indices = {
-            "all": self.data.loc[x + y],
-            "X": self.data.loc[x],
-            "Y": self.data.loc[y],
+            "X": self.data.loc[list(x)],
+            "Y": self.data.loc[list(y)],
         }
 
-        m_scatter(self.ax, indices, self.groups_scatter, False)
+        scatter(self.ax, indices, self.groups_scatter, show=True, tint=0.7)
 
     def set_group_buttons(self, ax):
-        indices = ["all", "X", "Y"]
+        """Sets signal group buttons.
+        """
+        indices = ["X", "Y"]
 
         buttons = CheckButtons(
-            ax, indices, [False for _ in range(len(indices))])
+            ax, indices, [True for _ in range(len(indices))])
 
         return buttons

@@ -39,37 +39,25 @@ def create_legend(ax, title, position, dict, **kwargs):
         item.set_visible(False)
 
 
-def scatter(ax, data_dict, scatter_list, artist_dict, show=False):
+def scatter(ax, data_dict, scatter_list, artist_dict=None, show=False, tint=1):
     for key, item in data_dict.items():
         m = markers[item.esp.astype(int)] if (
             type(item) == pd.Series) else markers[int(item["esp"].iloc[0])]
+        
+        if tint < 1:
+            for index, row in item.iterrows():
+                item.at[index, "labels"] = lighten_color(row["labels"], tint)
 
         scatter = ax.scatter(data=item, x="x", y="y", c="labels", edgecolors='black',
                              linewidths=0.5, marker=m, s=70, picker=True, pickradius=5)
         scatter.set_visible(show)
 
-        obj = item.index.tolist() if isinstance(item, pd.DataFrame) else item.name
-        artist_dict.update(
-            {scatter.findobj()[0]: obj})
+        if artist_dict != None:
+            obj = item.index.tolist() if isinstance(item, pd.DataFrame) else item.name
+            artist_dict.update(
+                {scatter.findobj()[0]: obj})
         scatter_list.update({key: scatter})
-
-
-def m_scatter(ax, data_dict, scatter_list, show=False):
-    for key, item in data_dict.items():
-        m = markers[item.esp.astype(int)] if (
-            type(item) == pd.Series) else markers[int(item["esp"].iloc[0])]
-
-        print(item["labels"])
-        for i, label in enumerate(item["labels"]):
-            item.iloc[i]["labels"] = lighten_color(label, 0.1)
-        print(item["labels"])
-        # exit()
-
-        scatter = ax.scatter(data=item, x="x", y="y", c="labels", edgecolors='black',
-                             linewidths=0.5, marker=m, s=70)
-        scatter.set_visible(show)
-
-        scatter_list.update({key: scatter})
+        
 
 # https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
 
