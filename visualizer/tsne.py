@@ -38,7 +38,7 @@ class Tsne:
 
         self.test_ax = set_ax(axes['A'], "Test")
         self.train_ax = set_ax(axes['B'], "Train")
-        self.label_ax = set_ax(axes['C'])
+        self.control_ax = set_ax(axes['C'])
         self.signal_ax = set_ax(axes['D'])
         self.knn_ax = set_ax(axes['E'])
         self.enable_knn_ax = set_ax(axes['F'])
@@ -75,7 +75,6 @@ class Tsne:
             self.test_ax, self.test_scatter, 'test', True)
 
         signal_buttons = self.set_group_buttons(self.signal_ax)
-        self.set_groups(101)
 
         if self.knn_example != None:
             all_knn = [self.knn_example] + self.knn_indices
@@ -87,16 +86,16 @@ class Tsne:
         return train_buttons, test_buttons, signal_buttons
 
     def set_widgets(self):
-        label_toggle = CheckButtons(self.label_ax, ["Real Label"], [True])
+        control_panel = CheckButtons(self.control_ax, ["Real Label", "Get Signal"], [True, False])
 
         if self.knn != None:
             knn_buttons = CheckButtons(
                 self.enable_knn_ax, ["Show KNN"], [False])
             slider = Slider(self.knn_ax, valmin=1, valmax=30, valinit=30,
                             label="K", valstep=[i for i in range(1, 31)])
-            return label_toggle, knn_buttons, slider
+            return control_panel, knn_buttons, slider
 
-        return label_toggle, None, None
+        return control_panel, None, None
 
     def set_scatterplot(self, ax, scatter_dict, mode, show=False):
         """Sets scatterplot of all points in "mode" and puts data in "scatter_dict".
@@ -114,7 +113,11 @@ class Tsne:
         return buttons
 
     def set_groups(self, signal_row, axis=None):
-        self.groups_scatter.clear()
+        if len(self.groups_scatter) != 0:
+            for _, item in self.groups_scatter.items():
+                item.set_visible(False)
+            self.groups_scatter.clear()
+            
         same_row = self.real_data.loc[self.real_data["RPD row"] == signal_row]
 
         x = same_row.loc[same_row["RPD axis"] == "X"].index.to_list()

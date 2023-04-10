@@ -24,15 +24,17 @@ class Window:
         self.signal_widget.on_clicked(
             lambda label: self.toggle_visibility(label, self.tsne.groups_scatter))
 
-        self.label_toggle, self.knn_widget, self.slider_widget = self.tsne.set_widgets()
-        self.label_toggle.on_clicked(self.set_colors_knn)
+        self.control_panel, self.knn_widget, self.slider_widget = self.tsne.set_widgets()
+        self.control_panel.on_clicked(self.set_interaction)
         if self.tsne.knn != None:
             self.knn_widget.on_clicked(self.toggle_knn)
             self.slider_widget.on_changed(self.slider_update)
+            
+        self.get_signal_state = False
 
         self.set_colors_knn()
 
-        self.fig.canvas.mpl_connect('pick_event', self.show_graph)
+        self.fig.canvas.mpl_connect('pick_event', self.on_click)
 
     # check buttons
 
@@ -46,13 +48,8 @@ class Window:
         if info == None:
             return
 
-        if label == "all" or label == "X" or label == "Y":
-            index = label
-        else:
-            index = int(label)
-
+        index = label if label == "all" or label == "X" or label == "Y" else int(label)
         info[index].set_visible(not (info[index].get_visible()))
-
         self.fig.canvas.draw()
 
     def set_colors(self, tag, scatter, label_mode):
@@ -67,11 +64,17 @@ class Window:
         for id, scat in scatter.items():
             scat.set_facecolor(
                 data[data["esp"] == id - 1][label_mode].tolist())
+            
+    def set_interaction(self, label):
+        if (label == "Real Label"):
+            self.set_colors_knn()
+        elif (label == "Get Signal"):
+            self.get_signal_state = self.control_panel.get_status()[1]
 
     def set_colors_knn(self):
         """Sets the colors of all scatters.
         """
-        real_label = self.label_toggle.get_status()[0]
+        real_label = self.control_panel.get_status()[0]
         label_mode = 'labels' if real_label else 'p_label'
         self.tsne.data[label_mode] = self.tsne.label_colors if real_label else self.tsne.p_label_colors
 
@@ -93,6 +96,23 @@ class Window:
     # on click event
     # when clicked on point, gets artist responsible for creating it
     # gets list of indexes of artist and searches for id (order of creation)
+    
+    def on_click(self, event):
+        if self.get_signal_state:
+            self.get_signal(event)
+        else:
+            self.show_graph(event)
+            
+    def get_signal(self, event):
+        """Gets signal of clicked point.
+        """
+        indices = self.tsne.artists.get(event.artist)
+
+        for id in event.ind:
+            index = indices[id] if (type(indices) == list) else indices
+            signal = self.data.loc[index, "RPD row"]
+            self.tsne.set_groups(signal)
+            break
 
     def show_graph(self, event):
         """Show graph of picked signal based on event.
