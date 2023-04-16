@@ -3,21 +3,32 @@ from matplotlib.widgets import CheckButtons, Slider
 import numpy as np
 import pandas as pd
 from graph_helper import create_ax, set_ax, create_legend, scatter, m_scatter
-from constants import number_to_color_dict, marker_dict, name_to_color_dict, color_to_name_dict
+from constants import (
+    number_to_color_dict,
+    marker_dict,
+    name_to_color_dict,
+    color_to_name_dict,
+)
 
 
 class Tsne:
-    def __init__(self, tsne, knn, index, title, real_data):
+    def __init__(self, tsne, knn, index, title, real_data, info="", esp=0):
         self.data = tsne
         self.knn = knn
         self.title = title
         self.real_data = real_data
 
-        self.data['labels'] = self.data['labels'].map(number_to_color_dict)
-        self.data['p_label'] = self.data['p_label'].map(number_to_color_dict)
+        self.data["label"] = self.data["label"].map(name_to_color_dict)
+        self.data["p_label" + info] = self.data["p_label" + info].map(
+            number_to_color_dict
+        )
 
-        self.label_colors = self.data['labels']
-        self.p_label_colors = self.data['p_label']
+        self.label_colors = self.data["label"]
+        self.p_label_colors = self.data["p_label" + info]
+
+        self.esp = esp
+
+        self.info = info
 
         self.knn_example = index
         if index != None:
@@ -31,17 +42,16 @@ class Tsne:
         self.groups_scatter = {}
 
     def set_manager_window(self):
-        """Sets all axes of manager window.
-        """
+        """Sets all axes of manager window."""
         control_fig, axes = plt.subplot_mosaic("ABC;ABC;ABF;ABF;DDD;EEE")
         control_fig.canvas.manager.set_window_title("TSNE Manager")
 
-        self.test_ax = set_ax(axes['A'], "Test")
-        self.train_ax = set_ax(axes['B'], "Train")
-        self.control_ax = set_ax(axes['C'])
-        self.signal_ax = set_ax(axes['D'])
-        self.knn_ax = set_ax(axes['E'])
-        self.enable_knn_ax = set_ax(axes['F'])
+        self.test_ax = set_ax(axes["A"], "Test")
+        self.train_ax = set_ax(axes["B"], "Train")
+        self.control_ax = set_ax(axes["C"])
+        self.signal_ax = set_ax(axes["D"])
+        self.knn_ax = set_ax(axes["E"])
+        self.enable_knn_ax = set_ax(axes["F"])
 
     def set_tsne_window(self):
         """Sets plots of tsne window.
@@ -53,62 +63,73 @@ class Tsne:
         fig.canvas.manager.set_window_title(self.title)
 
         legend_esp_ax = create_ax(fig, [0, 0.95, 0.05, 0.05])
-        create_legend(legend_esp_ax, "ESPs", "upper left",
-                      marker_dict, **{"marker": 0})
+        create_legend(legend_esp_ax, "ESPs", "upper left", marker_dict, **{"marker": 0})
 
         legend_label_ax = create_ax(fig, [0, 0, 0.05, 0.05])
-        create_legend(legend_label_ax, "Labels", "lower left",
-                      name_to_color_dict, **{"c": 0})
+        create_legend(
+            legend_label_ax, "Labels", "lower left", name_to_color_dict, **{"c": 0}
+        )
 
         if self.knn_example != None:
-            example_info = self.data.loc[self.knn_example]
-            self.ax.set_title(str(self.knn_example) + " - " + color_to_name_dict[example_info['labels']] + " - ESP " + str(
-                example_info['esp'] + 1) + " - (predicted: " + color_to_name_dict[example_info['p_label']] + ")")
+            pass
+            # example_info = self.data.loc[self.knn_example]
+            # self.ax.set_title(str(self.knn_example) + " - " + color_to_name_dict[example_info[_labels_]] + " - ESP " + str(
+            #     example_info['esp'] + 1) + " - (predicted: " + color_to_name_dict[example_info[_p_label_]] + ")")
 
         return fig
 
     def set_plots(self):
         train_buttons = self.set_scatterplot(
-            self.train_ax, self.train_scatter, 'train', False)
+            self.train_ax, self.train_scatter, False, False
+        )
 
-        test_buttons = self.set_scatterplot(
-            self.test_ax, self.test_scatter, 'test', True)
+        test_buttons = self.set_scatterplot(self.test_ax, self.test_scatter, True, True)
 
         signal_buttons = self.set_group_buttons(self.signal_ax)
 
         if self.knn_example != None:
-            all_knn = [self.knn_example] + self.knn_indices
-            data_dict = {i: self.data.loc[index]
-                         for i, index in enumerate(all_knn)}
-            self.artists = scatter(
-                self.ax, data_dict, self.knn_artists, self.artists, False)
+            pass
+            # all_knn = [self.knn_example] + self.knn_indices
+            # data_dict = {i: self.data.loc[index]
+            #              for i, index in enumerate(all_knn)}
+            # self.artists = scatter(
+            #     self.ax, data_dict, self.knn_artists, self.artists, False)
 
         return train_buttons, test_buttons, signal_buttons
 
     def set_widgets(self):
-        control_panel = CheckButtons(self.control_ax, ["Real Label", "Get Signal"], [True, False])
+        control_panel = CheckButtons(
+            self.control_ax,
+            ["Real Label", "Get Signal", "Start Animation"],
+            [True, False, False],
+        )
 
         if self.knn != None:
-            knn_buttons = CheckButtons(
-                self.enable_knn_ax, ["Show KNN"], [False])
-            slider = Slider(self.knn_ax, valmin=1, valmax=30, valinit=30,
-                            label="K", valstep=[i for i in range(1, 31)])
-            return control_panel, knn_buttons, slider
+            pass
+            # knn_buttons = CheckButtons(
+            #     self.enable_knn_ax, ["Show KNN"], [False])
+            # slider = Slider(self.knn_ax, valmin=1, valmax=30, valinit=30,
+            #                 label="K", valstep=[i for i in range(1, 31)])
+            # return control_panel, knn_buttons, slider
 
         return control_panel, None, None
 
-    def set_scatterplot(self, ax, scatter_dict, mode, show=False):
-        """Sets scatterplot of all points in "mode" and puts data in "scatter_dict".
-        """
-        mode_data = self.data[self.data["mode"] == mode]
-        mode_esps = np.unique(mode_data["esp"].to_list()) + 1
+    def set_scatterplot(self, ax, scatter_dict, same=False, show=False):
+        """Sets scatterplot of all points in "mode" and puts data in "scatter_dict"."""
+        if same:
+            selected_data = self.data[self.data["esp"] == self.esp]
+        else:
+            selected_data = self.data[self.data["esp"] != self.esp]
+        selected_esps = np.unique(selected_data["esp"].to_list()) + 1
 
         buttons = CheckButtons(
-            ax, mode_esps, [show for _ in range(len(mode_esps))])
+            ax, selected_esps, [show for _ in range(len(selected_esps))]
+        )
 
-        data_dict = {esp: mode_data[mode_data["esp"]
-                                    == esp - 1] for esp in mode_esps}
-        scatter(self.ax, data_dict, scatter_dict, self.artists, show)
+        data_dict = {
+            esp: selected_data[selected_data["esp"] == esp - 1] for esp in selected_esps
+        }
+        scatter(self.ax, data_dict, scatter_dict, self.artists, show, info=self.info)
 
         return buttons
 
@@ -117,7 +138,7 @@ class Tsne:
             for _, item in self.groups_scatter.items():
                 item.set_visible(False)
             self.groups_scatter.clear()
-            
+
         same_row = self.real_data.loc[self.real_data["RPD row"] == signal_row]
 
         x = same_row.loc[same_row["RPD axis"] == "X"].index.to_list()
@@ -134,7 +155,6 @@ class Tsne:
     def set_group_buttons(self, ax):
         indices = ["all", "X", "Y"]
 
-        buttons = CheckButtons(
-            ax, indices, [False for _ in range(len(indices))])
+        buttons = CheckButtons(ax, indices, [False for _ in range(len(indices))])
 
         return buttons

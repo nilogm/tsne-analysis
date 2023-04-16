@@ -3,10 +3,10 @@ import pandas as pd
 
 
 def disable_edges(ax):
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
     ax.get_xaxis().set_ticks([])
     ax.get_yaxis().set_ticks([])
 
@@ -30,8 +30,9 @@ def create_legend(ax, title, position, dict, **kwargs):
     for item, form in dict.items():
         for key, _ in kwargs.items():
             kwargs[key] = form
-        a += [ax.scatter(0, 0, label=item, edgecolors='black',
-                         linewidths=0.8, **kwargs)]
+        a += [
+            ax.scatter(0, 0, label=item, edgecolors="black", linewidths=0.8, **kwargs)
+        ]
 
     ax.legend(title=title, loc=position)
 
@@ -39,25 +40,40 @@ def create_legend(ax, title, position, dict, **kwargs):
         item.set_visible(False)
 
 
-def scatter(ax, data_dict, scatter_list, artist_dict, show=False):
+def scatter(ax, data_dict, scatter_list, artist_dict, show=False, info=""):
     for key, item in data_dict.items():
-        m = markers[item.esp.astype(int)] if (
-            type(item) == pd.Series) else markers[int(item["esp"].iloc[0])]
+        m = (
+            markers[item.esp.astype(int)]
+            if (type(item) == pd.Series)
+            else markers[int(item["esp"].iloc[0])]
+        )
 
-        scatter = ax.scatter(data=item, x="x", y="y", c="labels", edgecolors='black',
-                             linewidths=0.5, marker=m, s=70, picker=True, pickradius=5)
+        scatter = ax.scatter(
+            data=item,
+            x="x" + info,
+            y="y" + info,
+            c="label" + info,
+            edgecolors="black",
+            linewidths=0.5,
+            marker=m,
+            s=70,
+            picker=True,
+            pickradius=5,
+        )
         scatter.set_visible(show)
 
         obj = item.index.tolist() if isinstance(item, pd.DataFrame) else item.name
-        artist_dict.update(
-            {scatter.findobj()[0]: obj})
+        artist_dict.update({scatter.findobj()[0]: obj})
         scatter_list.update({key: scatter})
 
 
 def m_scatter(ax, data_dict, scatter_list, show=False):
     for key, item in data_dict.items():
-        m = markers[item.esp.astype(int)] if (
-            type(item) == pd.Series) else markers[int(item["esp"].iloc[0])]
+        m = (
+            markers[item.esp.astype(int)]
+            if (type(item) == pd.Series)
+            else markers[int(item["esp"].iloc[0])]
+        )
 
         print(item["labels"])
         for i, label in enumerate(item["labels"]):
@@ -65,11 +81,20 @@ def m_scatter(ax, data_dict, scatter_list, show=False):
         print(item["labels"])
         # exit()
 
-        scatter = ax.scatter(data=item, x="x", y="y", c="labels", edgecolors='black',
-                             linewidths=0.5, marker=m, s=70)
+        scatter = ax.scatter(
+            data=item,
+            x="x",
+            y="y",
+            c="labels",
+            edgecolors="black",
+            linewidths=0.5,
+            marker=m,
+            s=70,
+        )
         scatter.set_visible(show)
 
         scatter_list.update({key: scatter})
+
 
 # https://stackoverflow.com/questions/37765197/darken-or-lighten-a-color-in-matplotlib
 
@@ -86,6 +111,7 @@ def lighten_color(color, amount=0.5):
     """
     import matplotlib.colors as mc
     import colorsys
+
     try:
         c = mc.cnames[color]
     except:
