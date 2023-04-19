@@ -1,5 +1,5 @@
 normal = "#33691e"
-unbalance = "#4a148c"
+unbalance = "#AA148c"
 faulty = "#b71c1c"
 rubbing = "#1a237e"
 misalignment = "#fdd835"

@@ -1,8 +1,5 @@
 import pandas as pd
-from os.path import exists
 from openTSNE import TSNE
-import numpy as np
-
 
 real_labels = pd.read_csv(
     "C:/Users/nilox/OneDrive/NINFA/Dataset/features_all.csv",
@@ -44,7 +41,7 @@ def make_TSNE(path, esp, files, out_path):
 
     # Cria as primeiras colunas do DataFrame
     main_data = pd.DataFrame()
-    main_data["index"] = base_tsne_data.index.values.tolist()
+    main_data["index"] = base_tsne_data.index.values
     main_data = main_data.set_index("index")
     main_data["esp"] = real_labels.loc[main_data.index.values, "esp_id"]
     main_data["label"] = real_labels.loc[main_data.index.values, "label"]
@@ -58,7 +55,6 @@ def make_TSNE(path, esp, files, out_path):
         X = tsne_data[["1", "2", "3", "4", "5", "6", "7", "8"]].to_numpy()
         embedding_new = embedding_train.transform(X)
 
-        main_data["p_label_" + epoch] = tsne_data.p_label
         main_data["x_" + epoch] = embedding_new[:, 0]
         main_data["y_" + epoch] = embedding_new[:, 1]
 
@@ -87,14 +83,15 @@ def make_TSNE(path, esp, files, out_path):
 import os
 
 if __name__ == "__main__":
-    path = "C:/Users/nilox/tsne-analysis/test tsne/predicts/"
-    out_path = "C:/Users/nilox/tsne-analysis/test tsne/tsne/"
+    path = "C:/Users/nilox/tsne-analysis/results/test1/predicts/"
+    out_path = "C:/Users/nilox/tsne-analysis/results/test1/tsne/"
 
     all_data = {str(i): None for i in range(1, 13)}
 
     # Para cada arquivo lido, quebrar em partes com split e colocar no array da esp
     for file in os.listdir(path):
-        esp = file.split("_")[-1][0]
+        esp = file.split("_")[-1]
+        esp = esp.removesuffix(".csv")
         all_data.update(
             {esp: [file]} if all_data[esp] == None else {esp: all_data[esp] + [file]}
         )
@@ -128,7 +125,7 @@ if __name__ == "__main__":
             info = f.split("_")
             epoch = info[-3]
 
-            correct_place = int(int(epoch) / 50)
+            correct_place = int(epoch) // 50
 
             temp = same_network[correct_place]
             same_network[correct_place] = f

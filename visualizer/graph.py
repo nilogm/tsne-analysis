@@ -1,5 +1,5 @@
-from constants import markers, number_to_color_dict, name_to_color_dict
-from graph_helper import lighten_color, disable_edges
+from constants import markers, number_to_color_dict, name_to_color_dict, marker_dict
+from graph_helper import lighten_color, disable_edges, create_ax, create_legend
 from plot import get_axis
 
 import matplotlib.pyplot as plt
@@ -68,12 +68,6 @@ class Graph:
         self.predicted_colors = [number_to_color_dict[l] for l in data["p_label"]]
         data["p_label"] = self.predicted_colors
 
-        amount_of_epochs = int((len(data.columns) - 2) / 3) - 1
-        for i in range(amount_of_epochs):
-            data["p_label_%d" % (i * 50)] = [
-                number_to_color_dict[l] for l in data["p_label_%d" % (i * 50)]
-            ]
-
         return data
 
     def get_groups(self, esp=0) -> dict[int : list[int]]:
@@ -100,14 +94,12 @@ class Graph:
             for id, scat in scatter.items():
                 scat.set_facecolor(self.data[self.data["esp"] == id][label])
 
-        for info, graph in self.graphs.items():
+        for _, graph in self.graphs.items():
             for g in graph:
                 if g == None:
                     continue
 
-                change_colors(
-                    g, "label" if self.display_real_labels else "p_label" + info
-                )
+                change_colors(g, "label" if self.display_real_labels else "p_label")
 
         self.fig.canvas.draw()
 
@@ -164,26 +156,34 @@ class Graph:
             "_0": self.set_scatters(scatter_ax, groups, info="_0"),
             "_50": self.set_scatters(scatter_ax, groups, info="_50"),
             "_100": self.set_scatters(scatter_ax, groups, info="_100"),
-            "": self.set_scatters(scatter_ax, groups),
+            "": self.set_scatters(scatter_ax, groups, show=True),
         }
         self.displayed_graph = len(self.graphs) - 1
 
-        self.anim = self.set_animation(fig)
+        self.anim = self.set_animation(fig, scatter_ax)
 
         self.display_real_labels = False
         self.reset_colors()
 
-        self.select_signal = True
+        self.plot_signal = False
         self.selected_signal_info = None
         self.set_manager(ax, esp)
 
         def on_pick(event: PickEvent):
             self.select_signal_focus(
                 event
-            ) if self.select_signal else self.select_signal_plot(event)
+            ) if self.plot_signal else self.select_signal_plot(event)
 
         fig.canvas.mpl_connect("close_event", lambda _: self.anim.stop())
         fig.canvas.mpl_connect("pick_event", lambda event: on_pick(event))
+
+        legend_esp_ax = create_ax(fig, [0, 0.95, 0.05, 0.05])
+        create_legend(legend_esp_ax, "ESPs", "upper left", marker_dict, **{"marker": 0})
+
+        legend_label_ax = create_ax(fig, [0, 0, 0.05, 0.05])
+        create_legend(
+            legend_label_ax, "Labels", "lower left", name_to_color_dict, **{"c": 0}
+        )
 
     def set_manager(self, ax: dict[plt.Axes], esp: int):
         """Sets the right side figure manager. Contains train and test toggle, animation, label and plot controls.
@@ -201,13 +201,13 @@ class Graph:
             esp = int(label)
             state = buttons.get_status()[dict[esp]]
             self.current_esp_visiblity[esp] = state
-            self.toggle_esp(esp, state)
+            self.toggle_esp(esp - 1, state)
 
         def on_click_control(label: str, dict: dict[str, int], buttons: CheckButtons):
             state = buttons.get_status()[dict[label]]
 
-            if label == "Plot":
-                self.select_signal = state
+            if label == "Select signal":
+                self.plot_signal = state
             elif label == "Animate":
                 self.anim.start() if state else self.anim.stop()
             elif label == "Real label":
@@ -230,23 +230,23 @@ class Graph:
             ax.set_title(title)
             return buttons
 
-        train_esps = pd.unique(self.data[self.data["esp"] != esp]["esp"])
+        train_esps = pd.unique(self.data[self.data["esp"] != esp]["esp"]) + 1
         train_esps.sort()
         self.train_buttons = set_buttons(ax["train"], "Train", train_esps, on_click_esp)
 
-        test_esps = pd.unique(self.data[self.data["esp"] == esp]["esp"])
+        test_esps = pd.unique(self.data[self.data["esp"] == esp]["esp"]) + 1
         test_esps.sort()
         self.test_buttons = set_buttons(
             ax["test"], "Test", test_esps, on_click_esp, toggle=True
         )
 
-        control_options = ["Plot", "Animate", "Real label"]
+        control_options = ["Select signal", "Animate", "Real label"]
         self.control_buttons = set_buttons(
             ax["control"], "Manager", control_options, on_click_control
         )
 
     def set_scatters(
-        self, ax: plt.Axes, groups: dict[int : list[int]], info=""
+        self, ax: plt.Axes, groups: dict[int : list[int]], info="", show=False
     ) -> tuple[dict[int, PathCollection], dict[int, PathCollection]]:
         """Sets train and test scatterplots.
 
@@ -255,18 +255,26 @@ class Graph:
             groups (dict[int : list[int]]): .
             info (str, optional): Additional info about selected columns. Defaults to "".
         """
-        train_scatter = None  # scatter(ax, self.data.loc[groups['train']], recall=self.artist_recall, info=info, **{"picker" : True, "pickradius" : 5})
+        train_scatter = scatter(
+            ax,
+            self.data.loc[groups["train"]],
+            recall=self.artist_recall,
+            info=info,
+            show=show,
+            **{"picker": True, "pickradius": 5}
+        )
         test_scatter = scatter(
             ax,
             self.data.loc[groups["test"]],
             recall=self.artist_recall,
             info=info,
+            show=show,
             **{"picker": True, "pickradius": 5}
         )
 
         return train_scatter, test_scatter
 
-    def set_animation(self, fig: Figure):
+    def set_animation(self, fig: Figure, ax: plt.Axes):
         """Sets epoch animation.
 
         Args:
@@ -280,8 +288,16 @@ class Graph:
                 else -len(self.graphs) + 1
             )
 
-            for i, (_, graph) in enumerate(self.graphs.items()):
+            for i, (info, graph) in enumerate(self.graphs.items()):
                 show = self.displayed_graph == i
+                if show:
+                    title = (
+                        "Now showing: " + info[1:] + " epochs"
+                        if len(info) > 0
+                        else "Now showing: final epoch"
+                    )
+                    ax.set_title(title)
+
                 for g in graph:
                     if g == None:
                         continue
@@ -314,14 +330,14 @@ class Graph:
             break
 
     def select_signal_plot(self, event: PickEvent):
-        _, indices = self.artist_recall.get(event.artist)
+        indices = self.artist_recall.get(event.artist)
 
         for id in event.ind:
             index = indices[id] if (type(indices) == list) else indices
             signal = self.features.loc[index, "RPD row"]
             esp = self.features.loc[index, "esp_id"]
             axis = self.features.loc[index, "RPD axis"]
-            title = str(index) + " - ESP " + str(esp) + " - " + str(signal) + axis
+            title = str(index) + " - ESP " + str(esp + 1) + " - " + str(signal) + axis
 
             fig, ax = plt.subplots()
             X, Y = get_axis(index)
@@ -344,8 +360,8 @@ class Graph:
         same_axis = same_row.loc[same_row["RPD axis"] == axis].index
 
         selection = self.data.loc[self.data["esp"] == esp]
-        for info, graph in self.graphs.items():
-            col = "label" if self.display_real_labels else "p_label" + info
+        for _, graph in self.graphs.items():
+            col = "label" if self.display_real_labels else "p_label"
             for i in same_axis:
                 selection.loc[i, col] = lighten_color(selection.loc[i, col], 0.6)
 
@@ -366,6 +382,7 @@ def scatter(
     tint=1,
     recall: dict[Artist, list[int]] = None,
     info="",
+    show=False,
     **kwargs
 ) -> dict[int, PathCollection]:
     """Creates scatterplot of data and returns dictionary to each scatter.
@@ -400,7 +417,7 @@ def scatter(
             s=70,
             **kwargs
         )
-        s.set_visible(True)
+        s.set_visible(show)
 
         if recall != None:
             obj = selection.index.tolist()
@@ -412,15 +429,15 @@ def scatter(
 
 
 if __name__ == "__main__":
-    path = "C:/Users/nilox/tsne-analysis/test tsne"
+    path = "C:/Users/nilox/tsne-analysis/results/test1"
     data_path = "C:/Users/nilox/OneDrive/NINFA/Dataset/"
 
-    esp = 6
+    esp = 1
 
     data = pd.read_csv(path + "/tsne/tsne_%d.csv" % esp, sep=",").set_index("index")
     features = pd.read_csv(data_path + "/features_all.csv", sep=";").set_index("id")
 
     a = Graph(data.copy(), features=features)
-    a.set_graph(esp)
+    a.set_graph(esp - 1)
 
     plt.show()
